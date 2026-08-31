@@ -295,19 +295,18 @@
     <string name="apikey_get_openrouter">前往 OpenRouter 获取</string>
     <string name="apikey_get_google">前往 Google AI Studio 获取</string>
 
-    <!-- Picovoice / Quick Vision -->
+    <!-- Vosk / Quick Vision -->
     <string name="settings_quickvision">快速识图</string>
-    <string name="settings_picovoice">Picovoice 唤醒词</string>
-    <string name="picovoice_accesskey">Picovoice Access Key</string>
-    <string name="picovoice_accesskey_hint">输入您的 Picovoice Access Key</string>
-    <string name="picovoice_enabled">唤醒词已启用</string>
-    <string name="picovoice_disabled">唤醒词已禁用</string>
-    <string name="picovoice_start">开始监听</string>
-    <string name="picovoice_stop">停止监听</string>
-    <string name="picovoice_get_key">从 Picovoice Console 获取免费密钥</string>
-    <string name="picovoice_description">说 \"Jarvis\" 触发快速识图</string>
-    <string name="picovoice_not_configured">Access Key 未配置</string>
-    <string name="picovoice_configured">Access Key 已配置</string>
+    <string name="settings_vosk">Vosk 唤醒词</string>
+    <string name="vosk_enabled">唤醒词已启用</string>
+    <string name="vosk_disabled">唤醒词已禁用</string>
+    <string name="vosk_start">开始监听</string>
+    <string name="vosk_stop">停止监听</string>
+    <string name="vosk_description">说 \"Jarvis\" 触发快速识图</string>
+    <string name="vosk_model_ready">离线模型已就绪</string>
+    <string name="vosk_model_not_downloaded">模型未下载（完全免费，仅需下载一次）</string>
+    <string name="vosk_model_downloading">正在下载离线模型… %1$d%%</string>
+    <string name="vosk_model_download_failed">模型下载失败，请重试</string>
     <string name="wakeword_detection">唤醒词检测</string>
     <string name="wakeword_enabled_desc">说 \"Jarvis\" 触发快速识图</string>
     <string name="wakeword_disabled_desc">唤醒词检测已关闭</string>

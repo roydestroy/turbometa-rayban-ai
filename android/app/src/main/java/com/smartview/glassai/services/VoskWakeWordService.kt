@@ -6,67 +6,59 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import ai.picovoice.porcupine.Porcupine
-import ai.picovoice.porcupine.PorcupineManager
-import ai.picovoice.porcupine.PorcupineManagerCallback
-import ai.picovoice.porcupine.PorcupineException
-import android.content.BroadcastReceiver
-import android.content.IntentFilter
 import com.smartview.glassai.MainActivity
 import com.smartview.glassai.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.RecognitionListener
+import org.vosk.android.SpeechService
 
 /**
- * Porcupine Wake Word Detection Service
- * Foreground service for continuous wake word detection ("Jarvis")
- * Triggers Quick Vision when wake word is detected
+ * Vosk Wake Word Detection Service
+ * Foreground service for continuous, fully offline wake word detection ("Jarvis")
+ * using the open-source Vosk recognizer - no account or API key required.
+ * Triggers Quick Vision when the wake word is detected.
  */
-class PorcupineWakeWordService : Service() {
+class VoskWakeWordService : Service(), RecognitionListener {
 
     companion object {
-        private const val TAG = "PorcupineWakeWordService"
+        private const val TAG = "VoskWakeWordService"
         private const val NOTIFICATION_ID = 1001
-        private const val CHANNEL_ID = "porcupine_wake_word_channel"
+        private const val CHANNEL_ID = "vosk_wake_word_channel"
+        private const val SAMPLE_RATE = 16000.0f
+        private const val WAKE_WORD = "jarvis"
 
         // Action for wake word detected broadcast
         const val ACTION_WAKE_WORD_DETECTED = "com.smartview.glassai.WAKE_WORD_DETECTED"
-        const val EXTRA_KEYWORD_INDEX = "keyword_index"
 
         // Service control actions
         const val ACTION_START = "com.smartview.glassai.START_WAKE_WORD"
         const val ACTION_STOP = "com.smartview.glassai.STOP_WAKE_WORD"
 
-        // Picovoice Access Key - User needs to get this from https://console.picovoice.ai/
-        // This should be stored securely (e.g., in EncryptedSharedPreferences)
-        private const val PREFS_NAME = "porcupine_prefs"
-        private const val KEY_ACCESS_KEY = "porcupine_access_key"
-
         // Debounce: prevent multiple triggers within this time window
         private const val DEBOUNCE_MS = 10000L // 10 seconds
-
-        fun getAccessKey(context: Context): String? {
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            return prefs.getString(KEY_ACCESS_KEY, null)
-        }
-
-        fun saveAccessKey(context: Context, accessKey: String) {
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            prefs.edit().putString(KEY_ACCESS_KEY, accessKey).apply()
-        }
-
-        fun hasAccessKey(context: Context): Boolean {
-            return !getAccessKey(context).isNullOrBlank()
-        }
     }
 
-    private var porcupineManager: PorcupineManager? = null
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private var model: Model? = null
+    private var recognizer: Recognizer? = null
+    private var speechService: SpeechService? = null
     private var isListening = false
 
     // Debounce: track last trigger time to prevent multiple rapid triggers
@@ -118,6 +110,7 @@ class PorcupineWakeWordService : Service() {
             Log.e(TAG, "Error unregistering receiver: ${e.message}")
         }
         stopWakeWordDetection()
+        serviceScope.cancel()
         super.onDestroy()
     }
 
@@ -135,78 +128,107 @@ class PorcupineWakeWordService : Service() {
             return
         }
 
-        // Get Picovoice access key
-        val accessKey = getAccessKey(this)
-        if (accessKey.isNullOrBlank()) {
-            Log.e(TAG, "Picovoice access key not configured")
+        // The model must already be downloaded - Settings triggers the download
+        // before ever starting this service.
+        if (!VoskModelManager.isModelReady(this)) {
+            Log.e(TAG, "Vosk model not downloaded yet")
             stopSelf()
             return
         }
 
-        try {
-            // Create Porcupine manager with built-in "JARVIS" wake word
-            porcupineManager = PorcupineManager.Builder()
-                .setAccessKey(accessKey)
-                .setKeyword(Porcupine.BuiltInKeyword.JARVIS)
-                .setSensitivity(0.7f) // Adjust sensitivity (0.0 to 1.0)
-                .build(this, porcupineCallback)
+        startForeground(NOTIFICATION_ID, createNotification())
 
-            porcupineManager?.start()
-            isListening = true
+        // Loading the model touches disk and can take a moment, so keep it off the main thread.
+        serviceScope.launch {
+            try {
+                val loadedModel = Model(VoskModelManager.getModelDir(this@VoskWakeWordService).absolutePath)
+                // Restrict recognition to the wake word (plus catch-all) for accuracy and low CPU usage.
+                val loadedRecognizer = Recognizer(loadedModel, SAMPLE_RATE, "[\"$WAKE_WORD\", \"[unk]\"]")
+                model = loadedModel
+                recognizer = loadedRecognizer
 
-            // Start foreground service with notification
-            startForeground(NOTIFICATION_ID, createNotification())
+                val service = SpeechService(loadedRecognizer, SAMPLE_RATE)
+                speechService = service
+                service.startListening(this@VoskWakeWordService)
+                isListening = true
 
-            Log.d(TAG, "Wake word detection started - listening for 'JARVIS'")
-
-        } catch (e: PorcupineException) {
-            Log.e(TAG, "Failed to start Porcupine: ${e.message}")
-            stopSelf()
+                Log.d(TAG, "Wake word detection started - listening for \"$WAKE_WORD\"")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start Vosk: ${e.message}", e)
+                stopSelf()
+            }
         }
     }
 
     private fun stopWakeWordDetection() {
         try {
-            porcupineManager?.stop()
-            porcupineManager?.delete()
-            porcupineManager = null
+            speechService?.stop()
+            speechService?.shutdown()
+            speechService = null
+            recognizer?.close()
+            recognizer = null
+            model?.close()
+            model = null
             isListening = false
             Log.d(TAG, "Wake word detection stopped")
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping Porcupine: ${e.message}")
+            Log.e(TAG, "Error stopping Vosk: ${e.message}")
         }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    private val porcupineCallback = PorcupineManagerCallback { keywordIndex ->
+    private fun handleHypothesis(hypothesis: String?) {
+        if (hypothesis.isNullOrBlank()) return
+
+        val text = try {
+            JSONObject(hypothesis).optString("text")
+        } catch (e: Exception) {
+            ""
+        }
+        if (!text.contains(WAKE_WORD, ignoreCase = true)) return
+
         val currentTime = System.currentTimeMillis()
 
         // Debounce: ignore if already processing or triggered recently
         if (isProcessing) {
             Log.d(TAG, "Wake word detected but already processing, ignoring")
-            return@PorcupineManagerCallback
+            return
         }
-
         if (currentTime - lastTriggerTime < DEBOUNCE_MS) {
             Log.d(TAG, "Wake word detected but within debounce window (${currentTime - lastTriggerTime}ms), ignoring")
-            return@PorcupineManagerCallback
+            return
         }
 
-        Log.d(TAG, "Wake word detected! Keyword index: $keywordIndex")
+        Log.d(TAG, "Wake word detected!")
         lastTriggerTime = currentTime
         isProcessing = true
 
         // Broadcast wake word detection
         val intent = Intent(ACTION_WAKE_WORD_DETECTED).apply {
-            putExtra(EXTRA_KEYWORD_INDEX, keywordIndex)
             setPackage(packageName)
         }
         sendBroadcast(intent)
 
         // Trigger Quick Vision
         triggerQuickVision()
+    }
+
+    override fun onPartialResult(hypothesis: String?) = handleHypothesis(hypothesis)
+
+    override fun onResult(hypothesis: String?) = handleHypothesis(hypothesis)
+
+    override fun onFinalResult(hypothesis: String?) = handleHypothesis(hypothesis)
+
+    override fun onError(exception: Exception?) {
+        Log.e(TAG, "Vosk recognition error: ${exception?.message}")
+    }
+
+    override fun onTimeout() {
+        // Vosk's recognizer stops itself after its internal silence timeout - restart it
+        // immediately so wake word detection stays continuous.
+        speechService?.startListening(this)
     }
 
     private fun triggerQuickVision() {
@@ -247,7 +269,7 @@ class PorcupineWakeWordService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val stopIntent = Intent(this, PorcupineWakeWordService::class.java).apply {
+        val stopIntent = Intent(this, VoskWakeWordService::class.java).apply {
             action = ACTION_STOP
         }
         val stopPendingIntent = PendingIntent.getService(

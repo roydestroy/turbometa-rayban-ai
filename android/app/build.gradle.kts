@@ -61,6 +61,11 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        // JNA (required by vosk-android) ships native libs that need legacy
+        // packaging to load correctly on-device.
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     lint {
@@ -125,8 +130,9 @@ dependencies {
     // Collections
     implementation(libs.kotlinx.collections.immutable)
 
-    // Picovoice Wake Word Detection
-    implementation(libs.picovoice.porcupine)
+    // Vosk Wake Word Detection (free, fully offline, no account/API key required)
+    implementation("com.alphacephei:vosk-android:${libs.versions.vosk.get()}@aar")
+    implementation("net.java.dev.jna:jna:${libs.versions.jna.get()}@aar")
 
     // RTMP Streaming (RootEncoder old version without Compose dependencies)
     implementation(libs.rtmp.client)

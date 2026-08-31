@@ -97,7 +97,7 @@ fun QuickVisionScreen(
     val captureFailedText = stringResource(R.string.capture_failed)
     val analysisFailedText = stringResource(R.string.analysis_failed)
     val stopSpeakingText = stringResource(R.string.liveai_stop)
-    val jarvisTipText = stringResource(R.string.picovoice_description)
+    val jarvisTipText = stringResource(R.string.vosk_description)
 
     // Initialize TTS
     DisposableEffect(Unit) {

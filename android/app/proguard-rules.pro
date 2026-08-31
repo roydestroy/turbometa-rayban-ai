@@ -34,6 +34,12 @@
 -keep class okhttp3.** { *; }
 -keep class okio.** { *; }
 
+# Keep Vosk and JNA (native bindings resolved via reflection)
+-keep class org.vosk.** { *; }
+-dontwarn org.vosk.**
+-keep class com.sun.jna.** { *; }
+-dontwarn com.sun.jna.**
+
 # Keep Kotlin Coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}

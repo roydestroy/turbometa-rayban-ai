@@ -65,9 +65,9 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Porcupine Wake Word Detection Service -->
+        <!-- Vosk Wake Word Detection Service -->
         <service
-            android:name=".services.PorcupineWakeWordService"
+            android:name=".services.VoskWakeWordService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
 

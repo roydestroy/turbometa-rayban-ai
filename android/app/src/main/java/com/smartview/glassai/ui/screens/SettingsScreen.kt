@@ -46,13 +46,15 @@ import com.smartview.glassai.managers.APIProvider
 import com.smartview.glassai.managers.AppLanguage
 import com.smartview.glassai.managers.LiveAIProvider
 import com.smartview.glassai.managers.OpenRouterModel
-import com.smartview.glassai.services.PorcupineWakeWordService
+import com.smartview.glassai.services.VoskModelManager
+import com.smartview.glassai.services.VoskWakeWordService
 import com.smartview.glassai.ui.components.*
 import com.smartview.glassai.ui.theme.*
 import com.smartview.glassai.utils.AIModel
 import com.smartview.glassai.utils.OutputLanguage
 import com.smartview.glassai.utils.StreamQuality
 import com.smartview.glassai.viewmodels.SettingsViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,69 +103,75 @@ fun SettingsScreen(
     val isLoadingModels by viewModel.isLoadingModels.collectAsState()
     val modelsError by viewModel.modelsError.collectAsState()
 
-    // Picovoice states
-    var hasPicovoiceKey by remember { mutableStateOf(PorcupineWakeWordService.hasAccessKey(context)) }
-    var showPicovoiceDialog by remember { mutableStateOf(false) }
-    var isWakeWordEnabled by remember { mutableStateOf(isServiceRunning(context, PorcupineWakeWordService::class.java)) }
-    var pendingWakeWordEnable by remember { mutableStateOf(false) }
+    // Vosk wake word states - no account or API key needed, just a one-time free model download
+    var isModelReady by remember { mutableStateOf(VoskModelManager.isModelReady(context)) }
+    var isDownloadingModel by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableIntStateOf(0) }
+    var isWakeWordEnabled by remember { mutableStateOf(isServiceRunning(context, VoskWakeWordService::class.java)) }
+    val coroutineScope = rememberCoroutineScope()
+
+    fun startWakeWordService() {
+        val intent = Intent(context, VoskWakeWordService::class.java).apply {
+            action = VoskWakeWordService.ACTION_START
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+        isWakeWordEnabled = true
+        Toast.makeText(context, context.getString(R.string.vosk_enabled), Toast.LENGTH_SHORT).show()
+    }
 
     // Permission launcher for microphone
     val microphonePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Permission granted, start the service
-            val intent = Intent(context, PorcupineWakeWordService::class.java).apply {
-                action = PorcupineWakeWordService.ACTION_START
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
-            isWakeWordEnabled = true
-            Toast.makeText(context, context.getString(R.string.picovoice_enabled), Toast.LENGTH_SHORT).show()
+            startWakeWordService()
         } else {
             Toast.makeText(context, context.getString(R.string.permission_microphone), Toast.LENGTH_LONG).show()
         }
-        pendingWakeWordEnable = false
+    }
+
+    fun startWakeWordServiceIfPermitted() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        startWakeWordService()
     }
 
     // Function to toggle wake word service
     fun toggleWakeWordService(enabled: Boolean) {
         if (enabled) {
-            // Check if access key is configured
-            if (!PorcupineWakeWordService.hasAccessKey(context)) {
-                Toast.makeText(context, context.getString(R.string.picovoice_not_configured), Toast.LENGTH_SHORT).show()
-                showPicovoiceDialog = true
+            if (!isModelReady) {
+                if (isDownloadingModel) return
+                isDownloadingModel = true
+                downloadProgress = 0
+                coroutineScope.launch {
+                    val result = VoskModelManager.downloadAndUnpackModel(context) { progress ->
+                        downloadProgress = progress
+                    }
+                    isDownloadingModel = false
+                    result.onSuccess {
+                        isModelReady = true
+                        startWakeWordServiceIfPermitted()
+                    }.onFailure {
+                        Toast.makeText(context, context.getString(R.string.vosk_model_download_failed), Toast.LENGTH_SHORT).show()
+                    }
+                }
                 return
             }
-            // Check microphone permission
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                // Request permission
-                pendingWakeWordEnable = true
-                microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                return
-            }
-            // Start the service
-            val intent = Intent(context, PorcupineWakeWordService::class.java).apply {
-                action = PorcupineWakeWordService.ACTION_START
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
-            isWakeWordEnabled = true
-            Toast.makeText(context, context.getString(R.string.picovoice_enabled), Toast.LENGTH_SHORT).show()
+            startWakeWordServiceIfPermitted()
         } else {
             // Stop the service
-            val intent = Intent(context, PorcupineWakeWordService::class.java).apply {
-                action = PorcupineWakeWordService.ACTION_STOP
+            val intent = Intent(context, VoskWakeWordService::class.java).apply {
+                action = VoskWakeWordService.ACTION_STOP
             }
             context.startService(intent)
             isWakeWordEnabled = false
-            Toast.makeText(context, context.getString(R.string.picovoice_disabled), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.vosk_disabled), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -312,7 +320,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Quick Vision / Picovoice Section
+            // Quick Vision / Vosk Section
             SettingsSection(title = stringResource(R.string.settings_quickvision)) {
                 // Quick Vision Mode Settings
                 SettingsItem(
@@ -339,14 +347,19 @@ fun SettingsScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = AppSpacing.medium))
 
                 SettingsItem(
-                    icon = Icons.Default.Key,
-                    title = stringResource(R.string.picovoice_accesskey),
-                    subtitle = if (hasPicovoiceKey)
-                        stringResource(R.string.picovoice_configured)
-                    else
-                        stringResource(R.string.picovoice_not_configured),
-                    subtitleColor = if (hasPicovoiceKey) Success else Error,
-                    onClick = { showPicovoiceDialog = true }
+                    icon = Icons.Default.CloudDownload,
+                    title = stringResource(R.string.settings_vosk),
+                    subtitle = when {
+                        isDownloadingModel -> stringResource(R.string.vosk_model_downloading, downloadProgress)
+                        isModelReady -> stringResource(R.string.vosk_model_ready)
+                        else -> stringResource(R.string.vosk_model_not_downloaded)
+                    },
+                    subtitleColor = if (isModelReady) Success else Error,
+                    onClick = {
+                        if (!isModelReady && !isDownloadingModel) {
+                            toggleWakeWordService(true)
+                        }
+                    }
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = AppSpacing.medium))
@@ -532,19 +545,6 @@ fun SettingsScreen(
             onSave = { viewModel.saveApiKey(it) },
             onDelete = { viewModel.deleteApiKey() },
             onDismiss = { viewModel.hideApiKeyDialog() }
-        )
-    }
-
-    // Picovoice Dialog
-    if (showPicovoiceDialog) {
-        PicovoiceKeyDialog(
-            currentKey = PorcupineWakeWordService.getAccessKey(context) ?: "",
-            onSave = { key ->
-                PorcupineWakeWordService.saveAccessKey(context, key)
-                hasPicovoiceKey = PorcupineWakeWordService.hasAccessKey(context)
-                true
-            },
-            onDismiss = { showPicovoiceDialog = false }
         )
     }
 
@@ -808,86 +808,6 @@ private fun ApiKeyDialog(
             TextButton(
                 onClick = {
                     if (onSave(apiKey)) {
-                        onDismiss()
-                    }
-                }
-            ) {
-                Text(stringResource(R.string.save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
-    )
-}
-
-@Composable
-private fun PicovoiceKeyDialog(
-    currentKey: String,
-    onSave: (String) -> Boolean,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    var accessKey by remember { mutableStateOf(currentKey) }
-    var isVisible by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(text = stringResource(R.string.picovoice_accesskey), fontWeight = FontWeight.SemiBold)
-        },
-        text = {
-            Column {
-                Text(
-                    text = stringResource(R.string.picovoice_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-
-                Spacer(modifier = Modifier.height(AppSpacing.medium))
-
-                OutlinedTextField(
-                    value = accessKey,
-                    onValueChange = { accessKey = it },
-                    label = { Text(stringResource(R.string.picovoice_accesskey_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = if (isVisible) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        IconButton(onClick = { isVisible = !isVisible }) {
-                            Icon(
-                                imageVector = if (isVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = "Toggle visibility"
-                            )
-                        }
-                    },
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(AppSpacing.small))
-
-                TextButton(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://console.picovoice.ai/"))
-                        context.startActivity(intent)
-                    }
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.picovoice_get_key))
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (onSave(accessKey)) {
                         onDismiss()
                     }
                 }

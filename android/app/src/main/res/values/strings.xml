@@ -297,19 +297,18 @@
     <string name="apikey_get_openrouter">Get key from OpenRouter</string>
     <string name="apikey_get_google">Get key from Google AI Studio</string>
 
-    <!-- Picovoice / Quick Vision -->
+    <!-- Vosk / Quick Vision -->
     <string name="settings_quickvision">Quick Vision</string>
-    <string name="settings_picovoice">Picovoice Wake Word</string>
-    <string name="picovoice_accesskey">Picovoice Access Key</string>
-    <string name="picovoice_accesskey_hint">Enter your Picovoice Access Key</string>
-    <string name="picovoice_enabled">Wake Word Enabled</string>
-    <string name="picovoice_disabled">Wake Word Disabled</string>
-    <string name="picovoice_start">Start Listening</string>
-    <string name="picovoice_stop">Stop Listening</string>
-    <string name="picovoice_get_key">Get free key from Picovoice Console</string>
-    <string name="picovoice_description">Say \"Jarvis\" to trigger Quick Vision image recognition</string>
-    <string name="picovoice_not_configured">Access Key not configured</string>
-    <string name="picovoice_configured">Access Key configured</string>
+    <string name="settings_vosk">Vosk Wake Word</string>
+    <string name="vosk_enabled">Wake Word Enabled</string>
+    <string name="vosk_disabled">Wake Word Disabled</string>
+    <string name="vosk_start">Start Listening</string>
+    <string name="vosk_stop">Stop Listening</string>
+    <string name="vosk_description">Say \"Jarvis\" to trigger Quick Vision image recognition</string>
+    <string name="vosk_model_ready">Offline model ready</string>
+    <string name="vosk_model_not_downloaded">Model not downloaded (free, one-time download)</string>
+    <string name="vosk_model_downloading">Downloading offline model… %1$d%%</string>
+    <string name="vosk_model_download_failed">Model download failed, please try again</string>
     <string name="wakeword_detection">Wake Word Detection</string>
     <string name="wakeword_enabled_desc">Say "Jarvis" to trigger Quick Vision</string>
     <string name="wakeword_disabled_desc">Wake word detection is off</string>

@@ -46,29 +46,23 @@ Ray-Ban Meta 智能眼镜 AI 助手 Android 版本。
 
 ## ⚠️ Important Notes | 重要说明
 
-### Wake Word Detection (Picovoice) | 唤醒词检测
+### Wake Word Detection (Vosk) | 唤醒词检测
 
-The wake word detection feature ("Jarvis") uses **Picovoice Porcupine**. To use this feature:
+The wake word detection feature ("Jarvis") uses **Vosk**, a free and fully open-source offline speech recognizer. No account, API key, or internet connection is needed to run it — only a one-time model download.
 
-唤醒词检测功能（"Jarvis"）使用 **Picovoice Porcupine**。使用此功能需要：
+唤醒词检测功能（"Jarvis"）使用 **Vosk** —— 一个完全免费、开源的离线语音识别引擎。使用该功能无需注册账号或申请 API Key，也不需要联网运行，只需首次下载一次识别模型。
 
-1. **Register at Picovoice Console | 注册 Picovoice 账号**
-   - Go to https://console.picovoice.ai/
-   - Create a free account
-   - 访问 https://console.picovoice.ai/
-   - 创建免费账号
+1. **Enable in App | 在 App 中启用**
+   - Go to Settings → Quick Vision → Wake Word Detection and turn it on
+   - 进入 设置 → 快速识图 → 唤醒词检测，打开开关
 
-2. **Get Access Key | 获取 Access Key**
-   - After registration, get your Access Key from the console
-   - 注册后，从控制台获取 Access Key
+2. **One-time Model Download | 首次下载模型**
+   - The first time you enable it, the app downloads a small (~40MB) open-source Vosk speech model and caches it on-device
+   - This only happens once and requires no account of any kind
+   - 首次启用时，App 会自动下载一个约 40MB 的开源 Vosk 语音模型并缓存在本地
+   - 该下载仅需一次，且无需任何账号
 
-3. **Configure in App | 在 App 中配置**
-   - Go to Settings → Quick Vision → Picovoice Access Key
-   - Enter your Access Key
-   - 进入 设置 → 快速识图 → Picovoice Access Key
-   - 输入你的 Access Key
-
-4. **⚠️ Microphone Always On | 麦克风常开**
+3. **⚠️ Microphone Always On | 麦克风常开**
    - Wake word detection requires the microphone to be always listening
    - This runs as a foreground service with a notification
    - Battery optimization should be disabled for best performance
@@ -188,8 +182,8 @@ The wake word detection feature ("Jarvis") uses **Picovoice Porcupine**. To use 
 3. **Google AI Studio** (for Gemini Live)
    - Get API Key: https://aistudio.google.com/apikey
 
-4. **Picovoice** (for Wake Word Detection)
-   - Get Access Key: https://console.picovoice.ai/
+4. **Vosk** (for Wake Word Detection)
+   - No account or API key needed — the offline model downloads automatically the first time you enable the feature
 
 ---
 
