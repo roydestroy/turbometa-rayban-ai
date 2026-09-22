@@ -46,7 +46,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
 import java.util.Locale
-import java.util.concurrent.CountDownLatch
 import kotlin.coroutines.resume
 
 /**
@@ -77,7 +76,6 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var tts: TextToSpeech? = null
     private var isTtsReady = false
-    private var ttsInitLatch = CountDownLatch(1)
     private lateinit var apiKeyManager: APIKeyManager
     private lateinit var providerManager: APIProviderManager
     private lateinit var visionService: VisionAPIService
@@ -142,7 +140,6 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
             }
             Log.d(TAG, "TTS initialized - system: $systemLocale, output: $outputLocale")
         }
-        ttsInitLatch.countDown()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -202,7 +199,9 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
                 speak(lookingText)
 
                 // 2. Check if device is available
-                val hasDevice = deviceSelector.activeDevice(Wearables.devices).first() != null
+                val hasDevice = withTimeoutOrNull(5000) {
+                    deviceSelector.activeDevice(Wearables.devices).first()
+                } != null
                 if (!hasDevice) {
                     Log.e(TAG, "No device connected")
                     speak(getLocalizedString("no_device"))
@@ -315,9 +314,10 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
                 delay(2000)
                 finishService()
             } finally {
-                cleanup()
-                tts?.stop()
-                lease.close()
+                try {
+                    cleanup()
+                    tts?.stop()
+                } finally { lease.close() }
             }
         }
     }

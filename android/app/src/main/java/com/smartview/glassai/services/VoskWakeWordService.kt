@@ -56,8 +56,8 @@ class VoskWakeWordService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var worker: Job? = null
-    private var wanted = false
-    private var destroyed = false
+    @Volatile private var wanted = false
+    @Volatile private var destroyed = false
     private lateinit var audio: AudioManager
     private var lastTrigger = -10000L
 
@@ -74,6 +74,7 @@ class VoskWakeWordService : Service() {
         if (intent?.action == ACTION_STOP) {
             wanted = false
             mutableEnabled.value = false
+            mutableStatus.value = "Wake phrase is off"
             worker?.cancel()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -160,6 +161,8 @@ class VoskWakeWordService : Service() {
                 fail(error.message ?: "Wake phrase failed; switch off/on to retry")
             } finally {
                 worker = null
+                // A rapid off/on may arrive while the previous recorder is closing.
+                if (wanted && !destroyed) startWorker()
                 if (!wanted && mutableStatus.value.startsWith("Listening")) mutableStatus.value = "Wake phrase is off"
             }
         }
@@ -183,6 +186,7 @@ class VoskWakeWordService : Service() {
         val previousMode = audio.mode
         val previousDevice = audio.communicationDevice
         var routeOwned = false
+        var modeChanged = false
         var recorder: AudioRecord? = null
         val focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
             .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT)
@@ -201,6 +205,7 @@ class VoskWakeWordService : Service() {
             focusOwned = audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
             if (!focusOwned) { report("Waiting for microphone audio focus"); return false }
             audio.mode = AudioManager.MODE_IN_COMMUNICATION
+            modeChanged = true
             check(audio.setCommunicationDevice(device)) { "Could not select the glasses microphone" }
             routeOwned = true
             // Routing is asynchronous. Confirm it before accepting any speech.
@@ -255,14 +260,18 @@ class VoskWakeWordService : Service() {
             report("Microphone unavailable; reconnect glasses. Retrying…")
             return false
         } finally {
-            recorder?.let { runCatching { it.stop() }; it.release() }
-            if (routeOwned && audio.communicationDevice?.id == device.id) {
-                if (previousDevice != null && audio.availableCommunicationDevices.any { it.id == previousDevice.id })
-                    runCatching { audio.setCommunicationDevice(previousDevice) }
-                else runCatching { audio.clearCommunicationDevice() }
+            recorder?.let { runCatching { it.stop() }; runCatching { it.release() } }
+            runCatching {
+                val stillOwnsRoute = routeOwned && audio.communicationDevice?.id == device.id
+                if (stillOwnsRoute) {
+                    if (previousDevice != null && audio.availableCommunicationDevices.any { it.id == previousDevice.id })
+                        audio.setCommunicationDevice(previousDevice)
+                    else audio.clearCommunicationDevice()
+                }
+                if (modeChanged && (stillOwnsRoute || !routeOwned) && audio.mode == AudioManager.MODE_IN_COMMUNICATION)
+                    audio.mode = previousMode
             }
-            if (routeOwned && audio.mode == AudioManager.MODE_IN_COMMUNICATION) audio.mode = previousMode
-            if (focusOwned) audio.abandonAudioFocusRequest(focus)
+            if (focusOwned) runCatching { audio.abandonAudioFocusRequest(focus) }
         }
     }
 

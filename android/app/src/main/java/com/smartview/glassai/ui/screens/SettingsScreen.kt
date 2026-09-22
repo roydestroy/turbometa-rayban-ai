@@ -334,7 +334,11 @@ fun SettingsScreen(
                     icon = Icons.Default.Headset,
                     title = "Glasses microphone",
                     subtitle = "Choose your Meta glasses. Switch wake detection off before changing.",
-                    onClick = { showWakeMicrophones = true }
+                    onClick = {
+                        if (isWakeWordEnabled) {
+                            Toast.makeText(context, "Switch wake detection off before changing the microphone.", Toast.LENGTH_SHORT).show()
+                        } else showWakeMicrophones = true
+                    }
                 )
                 SettingsToggleItem(
                     icon = Icons.Default.RecordVoiceOver,
