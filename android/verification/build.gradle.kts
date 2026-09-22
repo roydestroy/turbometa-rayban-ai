@@ -6,6 +6,6 @@ dependencies {
 }
 kotlin { jvmToolchain(17) }
 sourceSets {
-    main { kotlin.srcDir("../app/src/main/java"); kotlin.include("**/GlassesAudioGate.kt") }
-    test { kotlin.srcDir("../app/src/test/java"); kotlin.include("**/GlassesAudioGateTest.kt") }
+    main { kotlin.srcDir("../app/src/main/java"); kotlin.include("**/GlassesAudioGate.kt", "**/WakeQuestion.kt") }
+    test { kotlin.srcDir("../app/src/test/java"); kotlin.include("**/GlassesAudioGateTest.kt", "**/WakeQuestionTest.kt") }
 }

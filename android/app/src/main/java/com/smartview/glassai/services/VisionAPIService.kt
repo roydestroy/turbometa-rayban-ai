@@ -107,7 +107,7 @@ class VisionAPIService(
                 .post(requestBody.toRequestBody("application/json".toMediaType()))
                 .build()
 
-            val response = client.newCall(request).execute()
+            val response = client.newCall(request).awaitResponse()
             val responseBody = response.body?.string()
 
             if (!response.isSuccessful) {
@@ -126,6 +126,8 @@ class VisionAPIService(
 
             Log.d(TAG, "Analysis successful")
             Result.success(result)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             Log.e(TAG, "Error analyzing image: ${e.message}")
             Result.failure(e)

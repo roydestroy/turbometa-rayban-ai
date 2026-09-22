@@ -37,8 +37,6 @@ class VoskWakeWordService : Service() {
         val enabled = mutableEnabled.asStateFlow()
         private val mutableStatus = MutableStateFlow("Wake phrase is off")
         val status = mutableStatus.asStateFlow()
-        private val phrases = setOf("hey vision", "hey vision please")
-        private const val GRAMMAR = "[\"hey vision\", \"hey vision please\", \"[unk]\"]"
 
         @SuppressLint("MissingPermission")
         fun availableMicrophones(context: Context): List<AudioDeviceInfo> {
@@ -59,7 +57,6 @@ class VoskWakeWordService : Service() {
     @Volatile private var wanted = false
     @Volatile private var destroyed = false
     private lateinit var audio: AudioManager
-    private var lastTrigger = -10000L
 
     override fun onCreate() {
         super.onCreate()
@@ -143,11 +140,12 @@ class VoskWakeWordService : Service() {
                             if (lease == null) { delay(100); continue }
                             val triggered = try { record(model, device) } finally { lease.close() }
                             ensureActive()
-                            if (triggered) {
+                            if (!triggered.isNullOrBlank()) {
                                 // The recorder and route have already been closed.
                                 withContext(Dispatchers.Main) {
                                     startForegroundService(Intent(this@VoskWakeWordService, QuickVisionService::class.java)
-                                        .setAction(QuickVisionService.ACTION_CAPTURE_AND_ANALYZE))
+                                        .setAction(QuickVisionService.ACTION_ASSISTANT)
+                                        .putExtra(QuickVisionService.EXTRA_QUESTION, triggered))
                                 }
                                 // Wait for the Quick Vision service to request its lease.
                                 delay(500)
@@ -182,7 +180,7 @@ class VoskWakeWordService : Service() {
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun record(model: Model, device: AudioDeviceInfo): Boolean {
+    private suspend fun record(model: Model, device: AudioDeviceInfo): String? {
         val previousMode = audio.mode
         val previousDevice = audio.communicationDevice
         var routeOwned = false
@@ -203,7 +201,7 @@ class VoskWakeWordService : Service() {
         var focusOwned = false
         try {
             focusOwned = audio.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-            if (!focusOwned) { report("Waiting for microphone audio focus"); return false }
+            if (!focusOwned) { report("Waiting for microphone audio focus"); return null }
             audio.mode = AudioManager.MODE_IN_COMMUNICATION
             modeChanged = true
             check(audio.setCommunicationDevice(device)) { "Could not select the glasses microphone" }
@@ -227,38 +225,43 @@ class VoskWakeWordService : Service() {
                 while (!isGlassesRoute(capture.routedDevice, device)) delay(50)
             }
             report("Listening on ${device.productName}: say Hey Vision")
-            Recognizer(model, RATE.toFloat(), GRAMMAR).use { recognizer ->
+            Recognizer(model, RATE.toFloat()).use { recognizer ->
+                var question = WakeQuestion()
                 val samples = ShortArray(1600)
                 while (currentCoroutineContext().isActive && GlassesAudioGate.featureRequests.value == 0) {
                     if (!isGlassesRoute(capture.routedDevice, device) ||
-                        audio.communicationDevice?.id != device.id) return false
+                        audio.communicationDevice?.id != device.id) return null
                     val count = capture.read(samples, 0, samples.size, AudioRecord.READ_NON_BLOCKING)
                     check(count >= 0) { "Glasses microphone disconnected (audio error $count)" }
+                    if (question.expired(SystemClock.elapsedRealtime())) {
+                        question = WakeQuestion()
+                        recognizer.reset()
+                        report("No complete question heard. Say Hey Vision, then your question.")
+                    }
                     if (count == 0) { delay(20); continue }
                     val complete = recognizer.acceptWaveForm(samples, count)
                     val result = JSONObject(if (complete) recognizer.result else recognizer.partialResult)
                     val text = result.optString("text").ifBlank { result.optString("partial") }
                         .lowercase(Locale.ROOT).trim().replace(Regex("\\s+"), " ")
-                    val now = SystemClock.elapsedRealtime()
-                    if (text in phrases && now - lastTrigger >= 10000) {
-                        lastTrigger = now
-                        return true
-                    }
+                    val wasListening = question.listening
+                    val command = question.accept(text, complete, SystemClock.elapsedRealtime())
+                    if (!wasListening && question.listening) report("Listening for your question…")
+                    if (command != null) return command
                     if (complete) recognizer.reset()
                 }
             }
-            return false
+            return null
         } catch (timeout: TimeoutCancellationException) {
             currentCoroutineContext().ensureActive()
             report("Glasses audio route is not ready; retrying…")
-            return false
+            return null
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (permission: SecurityException) {
             throw permission
         } catch (error: Exception) {
             report("Microphone unavailable; reconnect glasses. Retrying…")
-            return false
+            return null
         } finally {
             recorder?.let { runCatching { it.stop() }; runCatching { it.release() } }
             runCatching {

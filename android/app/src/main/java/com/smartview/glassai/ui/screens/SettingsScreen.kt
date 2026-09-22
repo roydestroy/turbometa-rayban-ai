@@ -103,6 +103,14 @@ fun SettingsScreen(
 
     val isWakeWordEnabled by VoskWakeWordService.enabled.collectAsState()
     val wakeWordStatus by VoskWakeWordService.status.collectAsState()
+    val assistantStatus by com.smartview.glassai.services.QuickVisionService.status.collectAsState()
+    var showAssistantResult by remember { mutableStateOf(false) }
+    if (showAssistantResult) {
+        AlertDialog(onDismissRequest = { showAssistantResult = false },
+            title = { Text("Last assistant result") },
+            text = { Text(assistantStatus) },
+            confirmButton = { TextButton(onClick = { showAssistantResult = false }) { Text("Close") } })
+    }
     var showWakeMicrophones by remember { mutableStateOf(false) }
 
     if (showWakeMicrophones) {
@@ -342,10 +350,16 @@ fun SettingsScreen(
                 )
                 SettingsToggleItem(
                     icon = Icons.Default.RecordVoiceOver,
-                    title = stringResource(R.string.wakeword_detection),
+                    title = "Voice assistant — Hey Vision",
                     subtitle = wakeWordStatus,
                     checked = isWakeWordEnabled,
                     onCheckedChange = { toggleWakeWordService(it) }
+                )
+                SettingsItem(
+                    icon = Icons.Default.Info,
+                    title = "Last assistant result",
+                    subtitle = assistantStatus,
+                    onClick = { showAssistantResult = true }
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = AppSpacing.medium))

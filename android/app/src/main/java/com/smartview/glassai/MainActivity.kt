@@ -28,6 +28,16 @@ import kotlinx.coroutines.sync.withLock
 
 class MainActivity : AppCompatActivity() {
 
+    override fun onResume() {
+        super.onResume()
+        com.smartview.glassai.services.AssistantNavigation.foregroundActivity = java.lang.ref.WeakReference(this)
+    }
+
+    override fun onPause() {
+        com.smartview.glassai.services.AssistantNavigation.foregroundActivity.clear()
+        super.onPause()
+    }
+
     companion object {
         // Required Android permissions for the DAT SDK
         val PERMISSIONS: Array<String> = arrayOf(
