@@ -1,10 +1,35 @@
 # Free wake phrase Android fork
 
-This fork keeps the existing TurboMeta Android features and replaces Picovoice
-with on-device Vosk. Say **Hey Vision** to run the selected Quick Vision mode.
-This phrase does not launch Live AI or provide a general voice command parser.
-Live AI, camera screens and RTMP remain accessible through the app.
-AI provider usage is separate and can incur provider charges.
+Version **1.6.0-assistant-beta** keeps the existing TurboMeta features and replaces
+Picovoice with on-device Vosk. Say **Hey Vision**, then ask a question in English.
+The camera stays off unless the assistant needs it to answer a visual request.
+Live AI, manual Quick Vision, camera screens and RTMP remain available in the app.
+The new assistant uses the selected **Vision provider/model**, not the Live AI
+provider. Choose a model that supports function calling and vision. Provider usage
+can incur charges; wake detection and English speech recognition run locally.
+
+## Assistant examples and limits
+
+- “Hey Vision, what is the weather in Athens?”: fetches current conditions and a
+  three-day forecast from [Open-Meteo](https://open-meteo.com/) (CC BY 4.0 data).
+  There is no automatic GPS lookup in this beta: name a city, or it asks which city.
+- “Hey Vision, read this sign”: waits for the glasses stream, requests a real SDK
+  photo (including the shutter behavior), then analyzes it for your question.
+- “Hey Vision, navigate to Syntagma Square in Athens”: opens Google Maps when
+  TurboMeta is foregrounded; otherwise provides a notification you must tap.
+  Allow notifications for this fallback. Maps handles GPS and route calculation.
+  Set Maps to play voice over Bluetooth and select the glasses as media output.
+  Wake listening pauses for navigation; enable it again in Settings afterward.
+- General questions get a spoken answer without camera access.
+- Say **Hey Vision again for each follow-up**. The last three completed exchanges
+  remain in process memory for up to five minutes, allowing clarification and
+  follow-up questions. “Hey Vision, stop listening” clears that history and returns
+  to wake detection; use the notification or Settings switch to disable the mic.
+- This is turn-based, not full-duplex: wait until the answer ends before speaking.
+  There is no general web search, messaging, calendar control or native Meta unlock.
+- Speak English for recognition in this version. Local recognition of Greek place
+  names can be imperfect. Settings → Last assistant result shows both what was
+  heard and the complete response/error.
 
 ## Setup
 
@@ -17,8 +42,10 @@ AI provider usage is separate and can incur provider charges.
 4. Enable Wake Word Detection and grant microphone/Nearby devices permissions.
 5. Allow the initial ~40 MB English model download to finish. Subsequent wake
    detection is offline. Read the status under the switch for errors or readiness.
-6. Say Hey Vision. Listening releases its recorder and Bluetooth route before
-   Quick Vision uses the glasses, then resumes after the feature finishes.
+6. Say Hey Vision, then your question (either together or with a brief pause).
+   Listening waits up to 20 seconds for a complete question. It releases its
+   recorder before the assistant starts, and resumes only after speech finishes.
+   No camera session is opened for the wake phrase alone.
 
 The notification provides a Stop listening action. Disable battery optimization
 if your phone suspends the foreground service. Continuous Bluetooth microphone
@@ -30,13 +57,19 @@ microphone restart following a killed process or reboot.
 
 - Test first model download, offline restart, stop during download, denied permissions.
 - Test glasses-only recording with the phone away; add a second headset and confirm selection.
-- Test repeated Quick Vision, screen lock, Bluetooth disconnect/reconnect, and Stop.
+- Test repeated visual questions, screen lock, Bluetooth disconnect/reconnect, and Stop.
+- Compare a manual Quick Vision capture with “Hey Vision, what am I looking at?”
+  Both should now request an actual photo. Record any full error in Settings.
+- Test a general question, weather for an explicitly named city, and a follow-up.
+- Test navigation with the app open and backgrounded; verify the notification
+  fallback and Maps audio through the glasses.
 - Enter/leave Live AI and each camera/streaming screen while wake listening is enabled.
 - Receive a phone call and confirm the app yields audio.
 - Check wake recognition in quiet/noisy surroundings and battery use over a session.
 
-Unit tests cover exclusive ownership, cancellation and duplicate release of
-the audio gate. These cannot substitute for actual hardware tests.
+Unit tests cover audio ownership/cancellation/duplicate release, wake-only input,
+single-utterance questions, unrelated speech, and incomplete-command timeout.
+These cannot substitute for hardware tests or a real request using your API key.
 
 ## Build
 

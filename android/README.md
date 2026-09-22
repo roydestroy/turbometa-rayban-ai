@@ -1,6 +1,6 @@
 # TurboMeta Ray-Ban AI - Android
 
-**Version 1.5.1-vosk-beta**
+**Version 1.6.0-assistant-beta**
 
 Fork setup, limitations and hardware checklist: [VOSK-FORK.md](VOSK-FORK.md).
 Download this fork's APK from the successful [Android Actions build](https://github.com/roydestroy/turbometa-rayban-ai/actions/workflows/android.yml), under **TurboMeta-free-wake-debug**. Upstream release APKs do not contain these fixes.
@@ -23,9 +23,9 @@ Ray-Ban Meta 智能眼镜 AI 助手 Android 版本。
 
 ### Quick Vision | 快速识图
 - Take photos with glasses and get AI analysis
-- Wake phrase detection: Say "Hey Vision" to trigger Quick Vision
+- Voice assistant: Say "Hey Vision", then ask a question; camera is used only for visual requests
 - 用眼镜拍照并获取 AI 分析
-- 唤醒短语检测：说 "Hey Vision" 触发快速识图
+- 语音助手：说 "Hey Vision" 后用英语提问；仅视觉问题调用摄像头
 
 ### Multi-Provider Support | 多提供商支持
 - **Vision API**: Alibaba Dashscope / OpenRouter (Gemini, Claude, etc.)

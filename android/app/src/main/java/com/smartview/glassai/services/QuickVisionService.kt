@@ -35,6 +35,8 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
         private const val NOTIFICATION = 1002
         private val mutableStatus = MutableStateFlow("No assistant request yet")
         val status = mutableStatus.asStateFlow()
+        private val mutableQuestion = MutableStateFlow("")
+        val lastQuestion = mutableQuestion.asStateFlow()
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var job: Job? = null
@@ -64,6 +66,7 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
         if (job?.isActive == true) return START_NOT_STICKY
         val question = intent?.getStringExtra(EXTRA_QUESTION)?.trim()?.take(2000)
         val assistant = intent?.action == ACTION_ASSISTANT
+        mutableQuestion.value = question ?: "Quick Vision"
         if (assistant && question.isNullOrBlank()) { stopSelf(); return START_NOT_STICKY }
         job = scope.launch {
             var lease: GlassesAudioGate.Lease? = null

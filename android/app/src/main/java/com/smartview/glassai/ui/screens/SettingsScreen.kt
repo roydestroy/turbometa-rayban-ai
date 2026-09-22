@@ -104,11 +104,12 @@ fun SettingsScreen(
     val isWakeWordEnabled by VoskWakeWordService.enabled.collectAsState()
     val wakeWordStatus by VoskWakeWordService.status.collectAsState()
     val assistantStatus by com.smartview.glassai.services.QuickVisionService.status.collectAsState()
+    val assistantQuestion by com.smartview.glassai.services.QuickVisionService.lastQuestion.collectAsState()
     var showAssistantResult by remember { mutableStateOf(false) }
     if (showAssistantResult) {
         AlertDialog(onDismissRequest = { showAssistantResult = false },
             title = { Text("Last assistant result") },
-            text = { Text(assistantStatus) },
+            text = { Text("Heard: $assistantQuestion\n\n$assistantStatus") },
             confirmButton = { TextButton(onClick = { showAssistantResult = false }) { Text("Close") } })
     }
     var showWakeMicrophones by remember { mutableStateOf(false) }
@@ -156,9 +157,14 @@ fun SettingsScreen(
     fun toggleWakeWordService(enabled: Boolean) {
         if (enabled) {
             // Check microphone permission
-            if (listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.BLUETOOTH_CONNECT).any { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }) {
+            val assistantPermissions = buildList {
+                add(Manifest.permission.RECORD_AUDIO)
+                add(Manifest.permission.BLUETOOTH_CONNECT)
+                if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            if (assistantPermissions.any { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }) {
                 // Request permission
-                microphonePermissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.BLUETOOTH_CONNECT))
+                microphonePermissionLauncher.launch(assistantPermissions.toTypedArray())
                 return
             }
             // Start the service
