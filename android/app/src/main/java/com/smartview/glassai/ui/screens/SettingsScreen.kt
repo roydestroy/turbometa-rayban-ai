@@ -101,13 +101,35 @@ fun SettingsScreen(
     val isLoadingModels by viewModel.isLoadingModels.collectAsState()
     val modelsError by viewModel.modelsError.collectAsState()
 
-    var isWakeWordEnabled by remember { mutableStateOf(isServiceRunning(context, VoskWakeWordService::class.java)) }
+    val isWakeWordEnabled by VoskWakeWordService.enabled.collectAsState()
+    val wakeWordStatus by VoskWakeWordService.status.collectAsState()
+    var showWakeMicrophones by remember { mutableStateOf(false) }
+
+    if (showWakeMicrophones) {
+        val devices = VoskWakeWordService.availableMicrophones(context)
+        AlertDialog(
+            onDismissRequest = { showWakeMicrophones = false },
+            title = { Text("Glasses microphone") },
+            text = {
+                Column {
+                    if (devices.isEmpty()) Text("Connect the glasses and grant Nearby devices permission, then reopen this list.")
+                    devices.forEach { device ->
+                        TextButton(onClick = {
+                            VoskWakeWordService.selectMicrophone(context, device)
+                            showWakeMicrophones = false
+                        }) { Text(device.productName.toString()) }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showWakeMicrophones = false }) { Text("Close") } }
+        )
+    }
 
     // Permission launcher for microphone
     val microphonePermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        if (listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.BLUETOOTH_CONNECT).all { grants[it] == true }) {
             // Permission granted, start the service
             val intent = Intent(context, VoskWakeWordService::class.java).apply {
                 action = VoskWakeWordService.ACTION_START
@@ -117,8 +139,6 @@ fun SettingsScreen(
             } else {
                 context.startService(intent)
             }
-            isWakeWordEnabled = true
-            Toast.makeText(context, context.getString(R.string.wakeword_enabled), Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(context, context.getString(R.string.permission_microphone), Toast.LENGTH_LONG).show()
         }
@@ -128,9 +148,9 @@ fun SettingsScreen(
     fun toggleWakeWordService(enabled: Boolean) {
         if (enabled) {
             // Check microphone permission
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            if (listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.BLUETOOTH_CONNECT).any { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }) {
                 // Request permission
-                microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                microphonePermissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.BLUETOOTH_CONNECT))
                 return
             }
             // Start the service
@@ -142,15 +162,12 @@ fun SettingsScreen(
             } else {
                 context.startService(intent)
             }
-            isWakeWordEnabled = true
-            Toast.makeText(context, context.getString(R.string.wakeword_enabled), Toast.LENGTH_SHORT).show()
         } else {
             // Stop the service
             val intent = Intent(context, VoskWakeWordService::class.java).apply {
                 action = VoskWakeWordService.ACTION_STOP
             }
             context.startService(intent)
-            isWakeWordEnabled = false
             Toast.makeText(context, context.getString(R.string.wakeword_disabled), Toast.LENGTH_SHORT).show()
         }
     }
@@ -313,13 +330,16 @@ fun SettingsScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = AppSpacing.medium))
 
                 // Wake Word Toggle
+                SettingsItem(
+                    icon = Icons.Default.Headset,
+                    title = "Glasses microphone",
+                    subtitle = "Choose your Meta glasses. Switch wake detection off before changing.",
+                    onClick = { showWakeMicrophones = true }
+                )
                 SettingsToggleItem(
                     icon = Icons.Default.RecordVoiceOver,
                     title = stringResource(R.string.wakeword_detection),
-                    subtitle = if (isWakeWordEnabled)
-                        stringResource(R.string.wakeword_enabled_desc)
-                    else
-                        stringResource(R.string.wakeword_disabled_desc),
+                    subtitle = wakeWordStatus,
                     checked = isWakeWordEnabled,
                     onCheckedChange = { toggleWakeWordService(it) }
                 )

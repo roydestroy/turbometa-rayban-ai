@@ -182,23 +182,18 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
         capturedFrame = null
     }
 
+    private var captureJob: Job? = null
+
     private fun captureAndAnalyze() {
+        if (captureJob?.isActive == true) return
         Log.d(TAG, "captureAndAnalyze called")
 
-        scope.launch {
+        captureJob = scope.launch {
+            val lease = GlassesAudioGate.acquireFeature()
             try {
                 // Wait for TTS to initialize
                 withTimeoutOrNull(2000) {
-                    suspendCancellableCoroutine<Unit> { continuation ->
-                        if (isTtsReady) {
-                            continuation.resume(Unit)
-                        } else {
-                            Thread {
-                                ttsInitLatch.await()
-                                mainHandler.post { continuation.resume(Unit) }
-                            }.start()
-                        }
-                    }
+                    while (!isTtsReady) delay(50)
                 }
 
                 // 1. Announce "正在识别"
@@ -293,7 +288,7 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
 
                             broadcastResult(description)
                             broadcastStatus("complete")
-                            speakAndWait(description, useOutputLocale = true)  // AI回复使用输出语言
+                            withTimeoutOrNull(120000) { speakAndWait(description, useOutputLocale = true) }
                         },
                         onFailure = { error ->
                             Log.e(TAG, "Analysis failed: ${error.message}")
@@ -311,12 +306,18 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
                 delay(500)
                 finishService()
 
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (e: Exception) {
                 Log.e(TAG, "Error in captureAndAnalyze: ${e.message}", e)
                 speak(getLocalizedString("error"))
                 broadcastStatus("error")
                 delay(2000)
                 finishService()
+            } finally {
+                cleanup()
+                tts?.stop()
+                lease.close()
             }
         }
     }
@@ -393,7 +394,9 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
         // 根据需要切换语言
         tts?.setLanguage(if (useOutputLocale) outputLocale else systemLocale)
         Log.d(TAG, "Speaking (wait): $text (locale: ${if (useOutputLocale) outputLocale else systemLocale})")
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+        continuation.invokeOnCancellation { tts?.stop() }
+        val result = tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+        if (result == TextToSpeech.ERROR && continuation.isActive) continuation.resume(Unit)
     }
 
     private fun getLocalizedString(key: String): String {
@@ -469,6 +472,7 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
     }
 
     private fun stopService() {
+        captureJob?.cancel()
         finishService()
     }
 

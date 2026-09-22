@@ -12,8 +12,8 @@ android {
         applicationId = "com.smartview.glassai"
         minSdk = 31
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.5.0"
+        versionCode = 5
+        versionName = "1.5.1-vosk-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -80,6 +80,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     // Meta Wearables DAT SDK
     implementation(libs.mwdat.core)
     implementation(libs.mwdat.camera)

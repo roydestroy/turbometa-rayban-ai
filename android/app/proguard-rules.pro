@@ -1,4 +1,7 @@
 # Add project specific ProGuard rules here.
+-keep class org.vosk.** { *; }
+-keep class com.sun.jna.** { *; }
+-dontwarn java.awt.**
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.kts.
 

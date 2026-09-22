@@ -17,6 +17,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.meta.wearable.dat.core.types.Permission
 import com.meta.wearable.dat.core.types.PermissionStatus
+import com.smartview.glassai.ui.components.GlassesFeatureSession
 import com.smartview.glassai.R
 import com.smartview.glassai.ui.screens.*
 import com.smartview.glassai.ui.theme.Primary
@@ -134,6 +135,7 @@ fun TurboMetaNavigation(
             }
 
             composable(Screen.LiveAI.route) {
+                GlassesFeatureSession {
                 LiveAIScreen(
                     wearablesViewModel = wearablesViewModel,
                     onRequestWearablesPermission = onRequestWearablesPermission,
@@ -141,9 +143,11 @@ fun TurboMetaNavigation(
                         navController.popBackStack()
                     }
                 )
+                }
             }
 
             composable(Screen.LeanEat.route) {
+                GlassesFeatureSession {
                 val currentFrame by wearablesViewModel.currentFrame.collectAsState()
                 LeanEatScreen(
                     currentFrame = currentFrame,
@@ -154,9 +158,11 @@ fun TurboMetaNavigation(
                         wearablesViewModel.takePhoto()
                     }
                 )
+                }
             }
 
             composable(Screen.Vision.route) {
+                GlassesFeatureSession {
                 val currentFrame by wearablesViewModel.currentFrame.collectAsState()
                 VisionScreen(
                     currentFrame = currentFrame,
@@ -167,15 +173,18 @@ fun TurboMetaNavigation(
                         wearablesViewModel.takePhoto()
                     }
                 )
+                }
             }
 
             composable(Screen.QuickVision.route) {
+                GlassesFeatureSession {
                 QuickVisionScreen(
                     wearablesViewModel = wearablesViewModel,
                     onBackClick = {
                         navController.popBackStack()
                     }
                 )
+                }
             }
 
             composable(Screen.Settings.route) {
@@ -212,20 +221,24 @@ fun TurboMetaNavigation(
             }
 
             composable(Screen.LiveStream.route) {
+                GlassesFeatureSession {
                 SimpleLiveStreamScreen(
                     wearablesViewModel = wearablesViewModel,
                     onBackClick = {
                         navController.popBackStack()
                     }
                 )
+                }
             }
 
             composable(Screen.RTMPStream.route) {
+                GlassesFeatureSession {
                 RTMPStreamingScreen(
                     onBackClick = {
                         navController.popBackStack()
                     }
                 )
+                }
             }
 
             composable(Screen.QuickVisionMode.route) {
