@@ -38,6 +38,27 @@ sealed class Screen(val route: String) {
     object LiveAIMode : Screen("live_ai_mode")
 }
 
+/** Photo screens need a live camera, but must analyze the requested photo, not every preview frame. */
+@Composable
+private fun GlassesPhotoSession(
+    wearablesViewModel: WearablesViewModel,
+    content: @Composable (android.graphics.Bitmap?) -> Unit
+) {
+    GlassesFeatureSession {
+        var photo by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+        DisposableEffect(wearablesViewModel) {
+            wearablesViewModel.onPhotoTaken = { photo = it }
+            wearablesViewModel.startStream()
+            onDispose {
+                wearablesViewModel.onPhotoTaken = null
+                wearablesViewModel.stopStream()
+                wearablesViewModel.clearCapturedPhoto()
+            }
+        }
+        content(photo)
+    }
+}
+
 sealed class BottomNavItem(
     val route: String,
     val icon: ImageVector,
@@ -147,8 +168,7 @@ fun TurboMetaNavigation(
             }
 
             composable(Screen.LeanEat.route) {
-                GlassesFeatureSession {
-                val currentFrame by wearablesViewModel.currentFrame.collectAsState()
+                GlassesPhotoSession(wearablesViewModel) { currentFrame ->
                 LeanEatScreen(
                     currentFrame = currentFrame,
                     onBackClick = {
@@ -162,8 +182,7 @@ fun TurboMetaNavigation(
             }
 
             composable(Screen.Vision.route) {
-                GlassesFeatureSession {
-                val currentFrame by wearablesViewModel.currentFrame.collectAsState()
+                GlassesPhotoSession(wearablesViewModel) { currentFrame ->
                 VisionScreen(
                     currentFrame = currentFrame,
                     onBackClick = {

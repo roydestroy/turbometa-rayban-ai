@@ -37,6 +37,7 @@ import com.meta.wearable.dat.core.types.PermissionStatus
 import com.smartview.glassai.R
 import com.smartview.glassai.ui.theme.*
 import com.smartview.glassai.utils.APIKeyManager
+import com.smartview.glassai.utils.findActivity
 import com.smartview.glassai.viewmodels.WearablesViewModel
 import kotlinx.coroutines.launch
 
@@ -52,6 +53,11 @@ fun HomeScreen(
     onNavigateToRTMPStream: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    fun withActivity(action: (android.app.Activity) -> Unit) {
+        val activity = context.findActivity()
+        if (activity != null) action(activity)
+        else wearablesViewModel.setError("Open the app to connect or disconnect your glasses.")
+    }
     val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     val apiKeyManager = remember { APIKeyManager.getInstance(context) }
@@ -165,7 +171,7 @@ fun HomeScreen(
                 Button(
                     onClick = {
                         showDeviceNotConnectedDialog = false
-                        wearablesViewModel.startDeviceSearch()
+                        withActivity { wearablesViewModel.startDeviceSearch(it) }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Primary)
                 ) {
@@ -253,8 +259,8 @@ fun HomeScreen(
             // Device Connection Card
             DeviceStatusCard(
                 connectionState = connectionState,
-                onConnect = { wearablesViewModel.startDeviceSearch() },
-                onDisconnect = { wearablesViewModel.disconnect() },
+                onConnect = { withActivity { wearablesViewModel.startDeviceSearch(it) } },
+                onDisconnect = { withActivity { wearablesViewModel.disconnect(it) } },
                 modifier = Modifier.padding(horizontal = AppSpacing.large)
             )
 

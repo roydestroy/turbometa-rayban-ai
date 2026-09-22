@@ -175,10 +175,10 @@ class WearablesViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun startDeviceSearch() {
+    fun startDeviceSearch(activity: android.app.Activity) {
         Log.d(TAG, "🔍 Starting device search")
         _connectionState.value = ConnectionState.Searching
-        startRegistration()
+        startRegistration(activity)
     }
 
     fun stopDeviceSearch() {
@@ -187,20 +187,20 @@ class WearablesViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun startRegistration() {
+    fun startRegistration(activity: android.app.Activity) {
         Log.d(TAG, "📝 Starting registration")
-        Wearables.startRegistration(getApplication())
+        Wearables.startRegistration(activity)
     }
 
-    fun startUnregistration() {
+    fun startUnregistration(activity: android.app.Activity) {
         Log.d(TAG, "📝 Starting unregistration")
-        Wearables.startUnregistration(getApplication())
+        Wearables.startUnregistration(activity)
     }
 
-    fun disconnect() {
+    fun disconnect(activity: android.app.Activity) {
         viewModelScope.launch {
             stopStream()
-            startUnregistration()
+            startUnregistration(activity)
             _connectionState.value = ConnectionState.Disconnected
             _batteryLevel.value = null
         }
