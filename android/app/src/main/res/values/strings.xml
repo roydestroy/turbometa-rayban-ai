@@ -311,7 +311,9 @@
     <string name="picovoice_not_configured">Access Key not configured</string>
     <string name="picovoice_configured">Access Key configured</string>
     <string name="wakeword_detection">Wake Word Detection</string>
-    <string name="wakeword_enabled_desc">Say "Jarvis" to trigger Quick Vision</string>
+    <string name="wakeword_enabled">Wake phrase enabled</string>
+    <string name="wakeword_disabled">Wake phrase disabled</string>
+    <string name="wakeword_enabled_desc">Say "Hey Vision" to trigger Quick Vision</string>
     <string name="wakeword_disabled_desc">Wake word detection is off</string>
     <string name="background_running">Background Running</string>
     <string name="background_running_desc">Allow app to run in background</string>

@@ -309,7 +309,9 @@
     <string name="picovoice_not_configured">Access Key 未配置</string>
     <string name="picovoice_configured">Access Key 已配置</string>
     <string name="wakeword_detection">唤醒词检测</string>
-    <string name="wakeword_enabled_desc">说 \"Jarvis\" 触发快速识图</string>
+    <string name="wakeword_enabled">唤醒短语已启用</string>
+    <string name="wakeword_disabled">唤醒短语已关闭</string>
+    <string name="wakeword_enabled_desc">说 \"Hey Vision\" 触发快速识图</string>
     <string name="wakeword_disabled_desc">唤醒词检测已关闭</string>
     <string name="background_running">后台运行</string>
     <string name="background_running_desc">允许应用在后台运行</string>

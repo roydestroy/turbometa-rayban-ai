@@ -125,8 +125,8 @@ dependencies {
     // Collections
     implementation(libs.kotlinx.collections.immutable)
 
-    // Picovoice Wake Word Detection
-    implementation(libs.picovoice.porcupine)
+    // Free offline wake-phrase recognition
+    implementation(libs.vosk.android)
 
     // RTMP Streaming (RootEncoder old version without Compose dependencies)
     implementation(libs.rtmp.client)

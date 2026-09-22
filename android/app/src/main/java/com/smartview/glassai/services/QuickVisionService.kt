@@ -167,7 +167,7 @@ class QuickVisionService : Service(), TextToSpeech.OnInitListener {
         tts?.stop()
         tts?.shutdown()
 
-        // Broadcast finished so PorcupineWakeWordService can reset isProcessing
+        // Broadcast finished so the wake-phrase service can resume listening.
         broadcastStatus("finished")
         super.onDestroy()
     }

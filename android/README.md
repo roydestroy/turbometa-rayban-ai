@@ -46,35 +46,23 @@ Ray-Ban Meta 智能眼镜 AI 助手 Android 版本。
 
 ## ⚠️ Important Notes | 重要说明
 
-### Wake Word Detection (Picovoice) | 唤醒词检测
+### Free Local Wake Phrase Detection (Vosk) | 免费本地唤醒短语检测
 
-The wake word detection feature ("Jarvis") uses **Picovoice Porcupine**. To use this feature:
+The wake phrase feature ("Hey Vision") uses **Vosk** entirely on the phone. It needs no Picovoice account, Access Key, or paid service:
 
-唤醒词检测功能（"Jarvis"）使用 **Picovoice Porcupine**。使用此功能需要：
+唤醒短语功能（"Hey Vision"）完全在手机上使用 **Vosk** 运行，不需要 Picovoice 帐户、Access Key 或付费服务。
 
-1. **Register at Picovoice Console | 注册 Picovoice 账号**
-   - Go to https://console.picovoice.ai/
-   - Create a free account
-   - 访问 https://console.picovoice.ai/
-   - 创建免费账号
+1. **Enable in App | 在 App 中启用**
+   - Go to Settings → Quick Vision → Wake Word Detection
+   - Turn on the toggle and grant microphone permission
 
-2. **Get Access Key | 获取 Access Key**
-   - After registration, get your Access Key from the console
-   - 注册后，从控制台获取 Access Key
-
-3. **Configure in App | 在 App 中配置**
-   - Go to Settings → Quick Vision → Picovoice Access Key
-   - Enter your Access Key
-   - 进入 设置 → 快速识图 → Picovoice Access Key
-   - 输入你的 Access Key
-
-4. **⚠️ Microphone Always On | 麦克风常开**
-   - Wake word detection requires the microphone to be always listening
+2. **⚠️ Microphone Always On | 麦克风常开**
+- Wake word detection requires the microphone to be always listening
    - This runs as a foreground service with a notification
    - Battery optimization should be disabled for best performance
    - 唤醒词检测需要麦克风一直处于监听状态
    - 这会作为前台服务运行，并显示通知
-   - 建议关闭电池优化以获得最佳体验
+- 建议关闭电池优化以获得最佳体验
 
 ### Google Gemini Live | Google Gemini Live
 
@@ -122,11 +110,11 @@ The wake word detection feature ("Jarvis") uses **Picovoice Porcupine**. To use 
 
 #### New Features | 新功能
 
-- **Wake Word Detection | 唤醒词检测**
-  - Say "Jarvis" to trigger Quick Vision without touching the phone
-  - Powered by Picovoice Porcupine
-  - 说 "Jarvis" 触发快速识图，无需触摸手机
-  - 基于 Picovoice Porcupine
+- **Free Local Wake Phrase Detection | 免费本地唤醒短语检测**
+  - Say "Hey Vision" to trigger Quick Vision without touching the phone
+  - Powered by the on-device Vosk model; no account or API key needed
+  - 说 "Hey Vision" 触发快速识图，无需触摸手机
+  - 基于本地 Vosk 模型，无需帐户或 API Key
 
 - **Vision Model Selection | 视觉模型选择**
   - Choose from multiple vision models
@@ -188,8 +176,8 @@ The wake word detection feature ("Jarvis") uses **Picovoice Porcupine**. To use 
 3. **Google AI Studio** (for Gemini Live)
    - Get API Key: https://aistudio.google.com/apikey
 
-4. **Picovoice** (for Wake Word Detection)
-   - Get Access Key: https://console.picovoice.ai/
+4. **Vosk** (for free local wake phrase detection)
+   - The English model downloads once on first use and stays on the device.
 
 ---
 
