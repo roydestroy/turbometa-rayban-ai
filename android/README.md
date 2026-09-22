@@ -1,6 +1,9 @@
 # TurboMeta Ray-Ban AI - Android
 
-**Version 1.4.0**
+**Version 1.5.1-vosk-beta**
+
+Fork setup, limitations and hardware checklist: [VOSK-FORK.md](VOSK-FORK.md).
+Download this fork's APK from the successful [Android Actions build](https://github.com/roydestroy/turbometa-rayban-ai/actions/workflows/android.yml), under **TurboMeta-free-wake-debug**. Upstream release APKs do not contain these fixes.
 
 Ray-Ban Meta 智能眼镜 AI 助手 Android 版本。
 
@@ -20,9 +23,9 @@ Ray-Ban Meta 智能眼镜 AI 助手 Android 版本。
 
 ### Quick Vision | 快速识图
 - Take photos with glasses and get AI analysis
-- Wake word detection: Say "Jarvis" to trigger Quick Vision
+- Wake phrase detection: Say "Hey Vision" to trigger Quick Vision
 - 用眼镜拍照并获取 AI 分析
-- 唤醒词检测：说 "Jarvis" 触发快速识图
+- 唤醒短语检测：说 "Hey Vision" 触发快速识图
 
 ### Multi-Provider Support | 多提供商支持
 - **Vision API**: Alibaba Dashscope / OpenRouter (Gemini, Claude, etc.)
@@ -54,7 +57,8 @@ The wake phrase feature ("Hey Vision") uses **Vosk** entirely on the phone. It n
 
 1. **Enable in App | 在 App 中启用**
    - Go to Settings → Quick Vision → Wake Word Detection
-   - Turn on the toggle and grant microphone permission
+   - Choose Glasses microphone, then turn on the toggle and grant microphone/Nearby devices permissions
+   - Wait for the initial offline model download and the Listening status
 
 2. **⚠️ Microphone Always On | 麦克风常开**
 - Wake word detection requires the microphone to be always listening

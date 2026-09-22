@@ -1,5 +1,12 @@
 # TurboMeta - RayBan Meta 智能眼镜 AI 助手
 
+> **Android Vosk fork (1.5.1 beta):** free on-device “Hey Vision” wake phrase,
+> safer audio handoff and model installation, and fixes for registration/photo sessions.
+> See [setup and limitations](android/VOSK-FORK.md).
+> Download this fork's APK from a successful [Android build](https://github.com/roydestroy/turbometa-rayban-ai/actions/workflows/android.yml)
+> under **TurboMeta-free-wake-debug**. The upstream release links below refer to the original app.
+> Build/unit checks do not replace testing on physical glasses.
+
 <div align="center">
 
 <img src="./rayban.png" width="120" alt="TurboMeta Logo"/>

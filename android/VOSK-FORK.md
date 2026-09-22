@@ -40,13 +40,17 @@ the audio gate. These cannot substitute for actual hardware tests.
 
 ## Build
 
-Use Java 17, Android SDK 35 and the committed Gradle wrapper. Configure a personal
+GitHub Actions builds and tests this fork using its normal repository token;
+no personal token is needed for that build. Download the `TurboMeta-free-wake-debug`
+artifact and install its ARM64 APK on a compatible ARM64 phone (Android 12+).
+
+For a local build, use Java 17, Android SDK 35 and the committed Gradle wrapper. Configure a personal
 GitHub token with read:packages in untracked android/local.properties as documented
 upstream if GitHub Packages requests authentication. Never commit this token.
 
     ./gradlew :app:testDebugUnitTest :app:assembleDebug
 
-The ARM64 debug APK is suitable for recent Samsung phones. It is signed with the
+The ARM64 debug APK is suitable for ARM64 Android phones. It is signed with the
 build machine's debug key. Android will reject updating an installed copy signed
 by a different key: preserve any data/settings before uninstalling that copy.
 
