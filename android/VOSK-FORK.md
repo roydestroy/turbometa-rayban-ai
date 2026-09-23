@@ -1,7 +1,7 @@
 # Free wake phrase Android fork
 
-Version **1.6.0-assistant-beta** keeps the existing TurboMeta features and replaces
-Picovoice with on-device Vosk. Say **Hey Vision**, then ask a question in English.
+Version **1.6.1-assistant-beta** keeps the existing TurboMeta features and replaces
+Picovoice with on-device Vosk. Say **Hey Vision**, hear a short ready chime, then ask a question in English.
 The camera stays off unless the assistant needs it to answer a visual request.
 Live AI, manual Quick Vision, camera screens and RTMP remain available in the app.
 The new assistant uses the selected **Vision provider/model**, not the Live AI
@@ -12,7 +12,15 @@ can incur charges; wake detection and English speech recognition run locally.
 
 - “Hey Vision, what is the weather in Athens?”: fetches current conditions and a
   three-day forecast from [Open-Meteo](https://open-meteo.com/) (CC BY 4.0 data).
-  There is no automatic GPS lookup in this beta: name a city, or it asks which city.
+  “What's the weather like today?” uses a one-time current phone location lookup.
+  Grant Location while using the app (approximate is enough), enable phone Location,
+  then turn the voice assistant off and on while TurboMeta is open. This starts a
+  location-capable foreground service so weather can also work with the screen locked.
+  No background/Always permission is requested. Location is only queried for weather,
+  not continuously tracked or saved. Coordinates are rounded to roughly 1 km before
+  sending them to Open-Meteo and the AI provider. Old fixes (over two minutes), missing
+  permission, disabled Location and a lookup timeout produce an explanation, not a guess.
+  Naming a city explicitly still works without location permission.
 - “Hey Vision, read this sign”: waits for the glasses stream, requests a real SDK
   photo (including the shutter behavior), then analyzes it for your question.
 - “Hey Vision, navigate to Syntagma Square in Athens”: opens Google Maps when
@@ -43,6 +51,8 @@ can incur charges; wake detection and English speech recognition run locally.
 5. Allow the initial ~40 MB English model download to finish. Subsequent wake
    detection is offline. Read the status under the switch for errors or readiness.
 6. Say Hey Vision, then your question (either together or with a brief pause).
+   A 120 ms chime plays once through the active glasses audio route. It uses the
+   communication/call volume; raise that volume if the chime is too quiet.
    Listening waits up to 20 seconds for a complete question. It releases its
    recorder before the assistant starts, and resumes only after speech finishes.
    No camera session is opened for the wake phrase alone.
@@ -61,6 +71,9 @@ microphone restart following a killed process or reboot.
 - Compare a manual Quick Vision capture with “Hey Vision, what am I looking at?”
   Both should now request an actual photo. Record any full error in Settings.
 - Test a general question, weather for an explicitly named city, and a follow-up.
+- Test the ready chime once per wake, including a question in the same sentence.
+- Test local weather with approximate permission, denied permission, phone Location
+  switched off, and after locking the screen. No city from an older turn should be reused.
 - Test navigation with the app open and backgrounded; verify the notification
   fallback and Maps audio through the glasses.
 - Enter/leave Live AI and each camera/streaming screen while wake listening is enabled.

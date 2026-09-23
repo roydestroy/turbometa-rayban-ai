@@ -37,6 +37,17 @@ class VoskWakeWordService : Service() {
         val enabled = mutableEnabled.asStateFlow()
         private val mutableStatus = MutableStateFlow("Wake phrase is off")
         val status = mutableStatus.asStateFlow()
+        private var locationHost: VoskWakeWordService? = null
+
+        suspend fun weatherLocation(context: Context): android.location.Location {
+            val host = locationHost
+            if (host != null && !host.destroyed && host.wanted) {
+                val request = host.scope.async { WeatherLocation.read(host) }
+                return try { request.await() } finally { request.cancel() }
+            }
+            if (AssistantNavigation.foregroundActivity.get() != null) return WeatherLocation.read(context)
+            error("Allow Location in Settings, then turn the voice assistant off and on while TurboMeta is open. Or name a city.")
+        }
 
         @SuppressLint("MissingPermission")
         fun availableMicrophones(context: Context): List<AudioDeviceInfo> {
@@ -78,7 +89,12 @@ class VoskWakeWordService : Service() {
         } else if (intent?.action == ACTION_START) {
             // Foreground immediately, before download, device lookup or routing.
             try {
-                startForeground(NOTIFICATION, notification("Preparing offline wake phrase…"))
+                val useLocation = WeatherLocation.permitted(this) &&
+                    getSystemService(android.location.LocationManager::class.java).isLocationEnabled
+                val serviceTypes = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
+                    (if (useLocation) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0)
+                startForeground(NOTIFICATION, notification("Preparing offline wake phrase…"), serviceTypes)
+                locationHost = if (useLocation) this else null
                 require(hasPermissions()) { "Grant microphone and Nearby devices permissions, then enable again." }
                 wanted = true
                 mutableEnabled.value = true
@@ -186,6 +202,7 @@ class VoskWakeWordService : Service() {
         var routeOwned = false
         var modeChanged = false
         var recorder: AudioRecord? = null
+        var readyTone: ToneGenerator? = null
         val focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
             .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
@@ -225,6 +242,8 @@ class VoskWakeWordService : Service() {
                 while (!isGlassesRoute(capture.routedDevice, device)) delay(50)
             }
             report("Listening on ${device.productName}: say Hey Vision")
+            readyTone = runCatching { ToneGenerator(AudioManager.STREAM_VOICE_CALL, 65) }.getOrNull()
+            var toneEndsAt = 0L
             Recognizer(model, RATE.toFloat()).use { recognizer ->
                 var question = WakeQuestion()
                 val samples = ShortArray(1600)
@@ -245,8 +264,16 @@ class VoskWakeWordService : Service() {
                         .lowercase(Locale.ROOT).trim().replace(Regex("\\s+"), " ")
                     val wasListening = question.listening
                     val command = question.accept(text, complete, SystemClock.elapsedRealtime())
-                    if (!wasListening && question.listening) report("Listening for your question…")
-                    if (command != null) return command
+                    if (!wasListening && question.listening) {
+                        report("Listening for your question…")
+                        if (runCatching { readyTone?.startTone(ToneGenerator.TONE_PROP_BEEP, 120) == true }.getOrDefault(false))
+                            toneEndsAt = SystemClock.elapsedRealtime() + 160
+                    }
+                    if (command != null) {
+                        // Finish the chime before releasing the Bluetooth route, even for one-breath commands.
+                        delay((toneEndsAt - SystemClock.elapsedRealtime()).coerceAtLeast(0))
+                        return command
+                    }
                     if (complete) recognizer.reset()
                 }
             }
@@ -263,6 +290,7 @@ class VoskWakeWordService : Service() {
             report("Microphone unavailable; reconnect glasses. Retrying…")
             return null
         } finally {
+            readyTone?.let { runCatching { it.release() } }
             recorder?.let { runCatching { it.stop() }; runCatching { it.release() } }
             runCatching {
                 val stillOwnsRoute = routeOwned && audio.communicationDevice?.id == device.id
@@ -284,6 +312,7 @@ class VoskWakeWordService : Service() {
                 (selected.address.isNotBlank() && input.address == selected.address))
 
     override fun onDestroy() {
+        if (locationHost === this) locationHost = null
         destroyed = true
         wanted = false
         mutableEnabled.value = false

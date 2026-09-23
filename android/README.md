@@ -1,6 +1,6 @@
 # TurboMeta Ray-Ban AI - Android
 
-**Version 1.6.0-assistant-beta**
+**Version 1.6.1-assistant-beta**
 
 Fork setup, limitations and hardware checklist: [VOSK-FORK.md](VOSK-FORK.md).
 Download this fork's APK from the successful [Android Actions build](https://github.com/roydestroy/turbometa-rayban-ai/actions/workflows/android.yml), under **TurboMeta-free-wake-debug**. Upstream release APKs do not contain these fixes.

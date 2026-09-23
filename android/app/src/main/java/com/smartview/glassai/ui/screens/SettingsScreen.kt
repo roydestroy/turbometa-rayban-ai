@@ -113,6 +113,14 @@ fun SettingsScreen(
             confirmButton = { TextButton(onClick = { showAssistantResult = false }) { Text("Close") } })
     }
     var showWakeMicrophones by remember { mutableStateOf(false) }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        val locationPermissionGranted = com.smartview.glassai.services.WeatherLocation.permitted(context)
+        Toast.makeText(context, if (locationPermissionGranted)
+            "Location enabled. Turn the voice assistant off and on to use weather with the screen locked."
+        else "Location not granted. You can still ask for weather in a named city.", Toast.LENGTH_LONG).show()
+    }
 
     if (showWakeMicrophones) {
         val devices = VoskWakeWordService.availableMicrophones(context)
@@ -160,6 +168,10 @@ fun SettingsScreen(
             val assistantPermissions = buildList {
                 add(Manifest.permission.RECORD_AUDIO)
                 add(Manifest.permission.BLUETOOTH_CONNECT)
+                if (!com.smartview.glassai.services.WeatherLocation.permitted(context)) {
+                    add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    add(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
                 if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
             }
             if (assistantPermissions.any { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }) {
@@ -366,6 +378,18 @@ fun SettingsScreen(
                     title = "Last assistant result",
                     subtitle = assistantStatus,
                     onClick = { showAssistantResult = true }
+                )
+                SettingsItem(
+                    icon = Icons.Default.LocationOn,
+                    title = "Location for local weather",
+                    subtitle = "Uses your phone location when you ask about weather. Approximate access is enough. After granting, turn the assistant off and on.",
+                    onClick = {
+                        if (com.smartview.glassai.services.WeatherLocation.permitted(context)) {
+                            context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                android.net.Uri.parse("package:${context.packageName}")))
+                        } else locationPermissionLauncher.launch(arrayOf(
+                            Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
+                    }
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = AppSpacing.medium))

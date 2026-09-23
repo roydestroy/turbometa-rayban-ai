@@ -1,6 +1,6 @@
 # TurboMeta - RayBan Meta 智能眼镜 AI 助手
 
-> **Android assistant fork (1.6.0 beta):** say “Hey Vision”, then ask a question.
+> **Android assistant fork (1.6.1 beta):** say “Hey Vision”, hear the ready chime, then ask a question.
 > Free local wake/speech recognition, camera on request, live weather and Google Maps handoff.
 > See [setup and limitations](android/VOSK-FORK.md).
 > Download this fork's APK from a successful [Android build](https://github.com/roydestroy/turbometa-rayban-ai/actions/workflows/android.yml)

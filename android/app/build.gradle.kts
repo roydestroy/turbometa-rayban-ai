@@ -12,8 +12,8 @@ android {
         applicationId = "com.smartview.glassai"
         minSdk = 31
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.6.0-assistant-beta"
+        versionCode = 7
+        versionName = "1.6.1-assistant-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

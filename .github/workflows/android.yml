@@ -27,6 +27,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash gradlew --no-configuration-cache --max-workers=2 :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify APK signatures and package metadata
+        run: |
+          for apk in app/build/outputs/apk/debug/*.apk; do
+            "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose "$apk"
+            "$ANDROID_HOME/build-tools/34.0.0/aapt" dump badging "$apk" | sed -n '1,3p'
+            sha256sum "$apk"
+          done
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

@@ -4,6 +4,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WakeQuestionTest {
+    @Test fun repeatedWakePartialsProduceOnlyOneReadyTransition() {
+        val state = WakeQuestion()
+        var chimes = 0
+        listOf("hey vision", "hey vision", "hey vision what is", "hey vision what is the weather").forEach {
+            val before = state.listening
+            state.accept(it, false, 1000)
+            if (!before && state.listening) chimes++
+        }
+        assertEquals(1, chimes)
+    }
     @Test fun wakeAloneDoesNotRequestAPhoto() {
         val state = WakeQuestion()
         assertNull(state.accept("hey vision", true, 100))
